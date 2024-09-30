@@ -14,10 +14,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Log in to Amazon ECR
+        id: login-ecr 
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          region: ${{ secrets.AWS_REGION }} 
-
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}        # Your AWS Access Key ID
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # Your AWS Secret Access Key
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}          # Your AWS Session Token (if applicable)
+          AWS_REGION: us-east-1             
+          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
