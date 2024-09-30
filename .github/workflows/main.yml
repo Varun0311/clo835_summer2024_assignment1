@@ -14,7 +14,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Log in to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: ${{ secrets.ECR_REGISTRY }}  # Make sure your registry is set in secrets
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
