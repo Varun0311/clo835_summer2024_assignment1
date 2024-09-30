@@ -23,6 +23,10 @@ jobs:
         AWS_REGION: us-east-1
 
     - name: Build and tag MySQL image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: assignment1
+        IMAGE_TAG: my_db
       run: |
         # Navigate to the directory containing Dockerfile_mysql if required
         docker build -t my_db -f Dockerfile_mysql .
@@ -41,11 +45,11 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: assignment1
-        IMAGE_TAG: v0.2
+        IMAGE_TAG: my_app
       run: |
         # Build the application image
         docker build -t my_app -f Dockerfile .
 
         # Push application image to ECR
         docker tag my_app $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:my_$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
