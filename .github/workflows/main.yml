@@ -45,7 +45,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Include session token
-          aws-region: US-EAST-1  # Ensure this is set as a secret in your repository
+          aws-region: ${{ secrets.AWS_REGION }} # Ensure this is set as a secret in your repository
 
       - name: Terraform Init
         run: |
