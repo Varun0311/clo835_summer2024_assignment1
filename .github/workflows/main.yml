@@ -1,37 +1,62 @@
-name: CI/CD for Docker
+name: CI/CD Pipeline for Docker to ECR
 
 on:
   push:
     branches:
-      - main
+      - main  # Change this to your main branch
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build the Docker image
+        run: |
+          docker build -t assignment1 .
+
+      - name: Tag the Docker image
+        run: |
+          docker tag assignment1:latest ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+
+      - name: Push the Docker image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add the session token here
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token
+          aws-region: us-east-1  # Change this to your desired region
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build Docker Image
+      - name: Run SSH commands to deploy to EC2
         run: |
-          docker build -t your-image-name .
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            # Pull the latest Docker image
+            sudo docker pull ${{ secrets.ECR_REGISTRY }}/assignment1:latest
 
-      - name: Tag Docker Image
-        run: |
-          docker tag your-image-name:latest 793896776375.dkr.ecr.us-east-1.amazonaws.com/clo835-week3:latest
+            # Stop the existing container (if any)
+            sudo docker stop assignment1 || true
+            sudo docker rm assignment1 || true
 
-      - name: Push Docker Image to ECR
-        run: |
-          docker push 793896776375.dkr.ecr.us-east-1.amazonaws.com/clo835-week3:latest
+            # Run the new container
+            sudo docker run -d --name assignment1 -p 80:80 ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+          EOF
