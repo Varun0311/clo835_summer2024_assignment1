@@ -26,6 +26,12 @@ jobs:
       run: |
         # Navigate to the directory containing Dockerfile_mysql if required
         docker build -t my_db -f Dockerfile_mysql .
+
+        # Tag the MySQL image for ECR
+        docker tag my_db $ECR_REGISTRY/$ECR_REPOSITORY:my_db
+
+        # Push the MySQL image to ECR
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:my_db
     
     - name: Run MySQL container
       run: |
@@ -41,5 +47,5 @@ jobs:
         docker build -t my_app -f Dockerfile .
 
         # Push application image to ECR
-        docker tag my_app $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker tag my_app $ECR_REGISTRY/$ECR_REPOSITORY:my_app
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:my_app
