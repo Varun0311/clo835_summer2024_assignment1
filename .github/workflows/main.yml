@@ -1,37 +1,36 @@
-name: Build and Push Docker Image to ECR
+name: CI/CD for Docker
 
 on:
   push:
     branches:
-      - main  # Trigger on push to the 'main' branch
+      - main
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1  # Explicitly specify the AWS region
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Log in to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build Docker image
-      run: |
-        docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:latest .
+      - name: Build Docker Image
+        run: |
+          docker build -t your-image-name .
 
-    - name: Tag the Docker image
-      run: |
-        docker tag ${{ secrets.ECR_REPOSITORY_URI }}:latest ${{ secrets.ECR_REPOSITORY_URI }}:latest
+      - name: Tag Docker Image
+        run: |
+          docker tag your-image-name:latest 793896776375.dkr.ecr.us-east-1.amazonaws.com/clo835-week3:latest
 
-    - name: Push Docker image to ECR
-      run: |
-        docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
+      - name: Push Docker Image to ECR
+        run: |
+          docker push 793896776375.dkr.ecr.us-east-1.amazonaws.com/clo835-week3:latest
