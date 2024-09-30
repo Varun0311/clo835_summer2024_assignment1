@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Docker to ECR
+name: CI/CD Pipeline for Docker to ECR and EC2
 
 on:
   push:
@@ -13,14 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registry: ${{ secrets.ECR_REGISTRY }}  # Make sure your registry is set in secrets
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build the Docker image
         run: |
@@ -42,17 +39,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Debug AWS Region
-        run: |
-          echo "AWS_REGION: ${{ secrets.AWS_REGION }}"  # Debug step to check AWS region
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Include session token
           aws-region: ${{ secrets.AWS_REGION }}  # Ensure this is set as a secret in your repository
+
+      - name: Terraform Init
+        run: |
+          cd terraform  # Change to the directory containing your Terraform files
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform  # Change to the directory containing your Terraform files
+          terraform apply -auto-approve  # Auto-approve to skip interactive confirmation
 
       - name: Run SSH commands to deploy to EC2
         run: |
@@ -65,5 +68,5 @@ jobs:
             sudo docker rm assignment1 || true
 
             # Run the new container
-            sudo docker run -d --name assignment1 -p 80:80 ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+            sudo docker run -d -p 80:80 ${{ secrets.ECR_REGISTRY }}/assignment1:latest
           EOF
