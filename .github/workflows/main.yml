@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Docker to ECR and EC2
+name: CI/CD Pipeline for Docker to ECR
 
 on:
   push:
@@ -13,11 +13,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: ${{ secrets.ECR_REGISTRY }}
+          region: ${{ secrets.AWS_REGION }}  # Explicitly set the region here
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Build the Docker image
         run: |
@@ -36,39 +39,20 @@ jobs:
     needs: build
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Include session token
-          # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token
+          aws-region: us-east-1  # Change this to your desired region
 
-      - name: Terraform Init
+      - name: Deploy the Docker image to EC2 using SSM
         run: |
-          cd terraform  # Change to the directory containing your Terraform files
-          terraform init
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Amazon-Linux-Instance" --query "Reservations[0].Instances[0].InstanceId" --output text)
 
-      - name: Terraform Apply
-        run: |
-          cd terraform  # Change to the directory containing your Terraform files
-          terraform apply -auto-approve  # Auto-approve to skip interactive confirmation
-
-      - name: Run SSH commands to deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            # Pull the latest Docker image
-            sudo docker pull ${{ secrets.ECR_REGISTRY }}/assignment1:latest
-
-            # Stop the existing container (if any)
-            sudo docker stop assignment1 || true
-            sudo docker rm assignment1 || true
-
-            # Run the new container
-            sudo docker run -d -p 80:80 ${{ secrets.ECR_REGISTRY }}/assignment1:latest
-          EOF
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=instanceids,Values=$INSTANCE_ID" \
+            --parameters 'commands=["docker pull '${{ secrets.ECR_REGISTRY }}/assignment1:latest'","docker stop assignment1 || true","docker rm assignment1 || true","docker run -d -p 80:80 '${{ secrets.ECR_REGISTRY }}/assignment1:latest'"]' \
+            --region ${{ secrets.AWS_REGION }}
