@@ -1,69 +1,45 @@
-name: CI/CD Pipeline for Docker to ECR
-
-on:
+on: 
   push:
-    branches:
-      - main
+    branches: [ master ]
 
 jobs:
+  
   build:
+    
+    name: Build and Push Images
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Check out code
+      uses: actions/checkout@v4
 
-      - name: Log in to Amazon ECR
-        id: login-ecr 
-        uses: aws-actions/amazon-ecr-login@v1
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        AWS_REGION: us-east-1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+    - name: Build and tag MySQL image
+      run: |
+        # Navigate to the directory containing Dockerfile_mysql if required
+        docker build -t my_db -f Dockerfile_mysql .
+    
+    - name: Run MySQL container
+      run: |
+        docker run -d -e MYSQL_ROOT_PASSWORD=pw my_db
 
-      - name: Build MySQL Docker image
-        run: |
-          docker build -t my_db -f Dockerfile_mysql .
+    - name: Build, tag, and push application image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: assignment1
+        IMAGE_TAG: v0.2
+      run: |
+        # Build the application image
+        docker build -t my_app -f Dockerfile .
 
-      - name: Build Application Docker image
-        run: |
-          docker build -t my_app -f Dockerfile .
-
-      - name: Tag MySQL Docker image
-        run: |
-          docker tag my_db $ECR_REGISTRY/$ECR_REPOSITORY:my_db
-
-      - name: Tag Application Docker image
-        run: |
-          docker tag my_app $ECR_REGISTRY/$ECR_REPOSITORY:my_app
-
-      - name: Push MySQL Docker image to ECR
-        run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:my_db
-
-      - name: Push Application Docker image to ECR
-        run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:my_app
-
-      - name: Run MySQL container and get IP
-        id: run_mysql
-        run: |
-          # Run MySQL container
-          docker run -d --name mysql_db -e MYSQL_ROOT_PASSWORD=pw my_db
-
-          # Get the IP address of the MySQL container
-          MYSQL_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mysql_db)
-          echo "MYSQL_IP=$MYSQL_IP" >> $GITHUB_ENV
-
-      - name: Set environment variables
-        run: |
-          echo "DBHOST=${{ env.MYSQL_IP }}" >> $GITHUB_ENV
-          echo "DBPORT=3306" >> $GITHUB_ENV
-          echo "DBUSER=root" >> $GITHUB_ENV
-          echo "DATABASE=employees" >> $GITHUB_ENV
-          echo "DBPWD=pw" >> $GITHUB_ENV
-          echo "APP_COLOR=blue" >> $GITHUB_ENV
+        # Push application image to ECR
+        docker tag my_app $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
