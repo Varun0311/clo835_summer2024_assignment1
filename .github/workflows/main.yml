@@ -15,10 +15,6 @@ jobs:
 
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registry: ${{ secrets.ECR_REGISTRY }}  # Use the ECR registry secret
-          region: us-east-1  # Specify the region here if needed
-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -40,19 +36,32 @@ jobs:
     needs: build
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token
-          aws-region: us-east-1  # Specify the region here
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token if needed
+          aws-region: ${{ secrets.AWS_REGION }}  # Make sure AWS_REGION is set in GitHub Secrets
 
-      - name: Deploy the Docker image to EC2 using SSM
+      - name: Run commands to deploy on EC2
         run: |
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Amazon-Linux-Instance" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          echo "Deploying to EC2..."
+          # Add any necessary deployment commands here.
+          # For example, using SSH to execute commands on your EC2 instance.
 
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --targets "Key=instanceids,Values=$INSTANCE_ID" \
-            --parameters 'commands=["docker pull '${{ secrets.ECR_REGISTRY }}/assignment1:latest'","docker stop assignment1 || true","docker rm assignment1 || true","docker run -d -p 80:80 '${{ secrets.ECR_REGISTRY }}/assignment1:latest'"]'
+          # Here is a basic example (adjust based on your needs):
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            # Pull the latest Docker image
+            sudo docker pull ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+
+            # Stop the existing container (if any)
+            sudo docker stop assignment1 || true
+            sudo docker rm assignment1 || true
+
+            # Run the new container
+            sudo docker run -d --name assignment1 -p 80:80 ${{ secrets.ECR_REGISTRY }}/assignment1:latest
+          EOF
