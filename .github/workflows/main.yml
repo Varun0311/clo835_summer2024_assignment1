@@ -18,7 +18,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        aws-region: us-east-1  # Explicitly specify the AWS region
 
     - name: Log in to Amazon ECR
       id: login-ecr
@@ -30,8 +30,4 @@ jobs:
 
     - name: Tag the Docker image
       run: |
-        docker tag ${{ secrets.ECR_REPOSITORY_URI }}:latest ${{ secrets.ECR_REPOSITORY_URI }}:latest
-
-    - name: Push Docker image to ECR
-      run: |
-        docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
+        docker tag ${{ sec
