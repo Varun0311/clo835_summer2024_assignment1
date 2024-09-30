@@ -67,5 +67,3 @@ jobs:
           echo "DATABASE=employees" >> $GITHUB_ENV
           echo "DBPWD=pw" >> $GITHUB_ENV
           echo "APP_COLOR=blue" >> $GITHUB_ENV
-
-      # ... other steps like deploying your application ... 
