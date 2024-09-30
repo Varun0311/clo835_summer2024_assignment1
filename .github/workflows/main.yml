@@ -36,7 +36,7 @@ jobs:
       - name: Tag MySQL Docker image
         run: |
           docker tag my_db:latest ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:my_db
-
+      
       - name: Tag Application Docker image
         run: |
           docker tag my_app:latest ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:my_app
