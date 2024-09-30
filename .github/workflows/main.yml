@@ -48,7 +48,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Add session token
-          aws-region: ${{ secrets.AWS_REGION }}  # Ensure this is set as a secret in your repository
+          aws-region: us-east-1  # Ensure this is set as a secret in your repository
 
       - name: Run SSH commands to deploy to EC2
         run: |
